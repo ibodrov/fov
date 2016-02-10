@@ -1,0 +1,6 @@
+[package]
+name = "fov"
+version = "0.1.0"
+authors = ["Ivan Bodrov <ibodrov@jet.msk.su>"]
+
+[dependencies]
