@@ -3,6 +3,7 @@ const MAP_HEIGHT: i32 = 8;
 
 struct Map([u8; (MAP_WIDTH * MAP_HEIGHT) as usize]);
 
+#[derive(Clone, Copy)]
 struct Point {
     x: i32,
     y: i32,
@@ -14,16 +15,14 @@ impl Point {
     }
 }
 
-const MAP: Map = Map([
-    1, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 1, 1, 1, 1, 1, 1,
-]);
+const MAP: Map = Map([1, 1, 1, 1, 1, 1, 1, 1,
+                      1, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 1, 1, 1, 1, 1,
+                      1, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 0, 0, 0, 0, 1,
+                      1, 1, 1, 1, 1, 1, 1, 1]);
 
 fn idx(x: i32, y: i32) -> usize {
     let v = y * MAP_HEIGHT + x;
@@ -31,6 +30,14 @@ fn idx(x: i32, y: i32) -> usize {
 }
 
 impl Map {
+    fn get_at(&self, x: i32, y: i32) -> u8 {
+        self.0[idx(x, y)]
+    }
+
+    fn set_at(&mut self, x: i32, y: i32, v: u8) {
+        self.0[idx(x, y)] = v;
+    }
+
     fn print(&self) {
         let m = self.0;
         for y in 0..MAP_HEIGHT {
@@ -45,7 +52,13 @@ impl Map {
 
     fn line_iter(&self, p0: Point, p1: Point) -> BresenhamIter {
         fn delta(v: i32) -> i32 {
-            if v > 0 { 1 } else if v < 0 { -1 } else { 0 }
+            if v > 0 {
+                1
+            } else if v < 0 {
+                -1
+            } else {
+                0
+            }
         }
 
         let w = p1.x - p0.x;
@@ -53,27 +66,33 @@ impl Map {
         let dx1 = delta(w);
         let dy1 = delta(h);
 
-        let (dx2, dy2, longest, shortest) = {
-            let mut dx2 = delta(w);
-            let mut dy2 = 0;
+        let mut dx2 = delta(w);
+        let mut dy2 = 0;
 
-            let mut longest = w.abs();
-            let mut shortest = h.abs();
+        let mut longest = w.abs();
+        let mut shortest = h.abs();
 
-            if !(longest > shortest) {
-                longest = h.abs();
-                shortest = w.abs();
-                dy2 = delta(h);
-                dx2 = 0;
-            }
-
-            (dx2, dy2, longest, shortest)
-        };
+        if !(longest > shortest) {
+            longest = h.abs();
+            shortest = w.abs();
+            dy2 = delta(h);
+            dx2 = 0;
+        }
 
         let numerator = longest >> 1;
 
-        BresenhamIter { i: 0, x: p0.x, y: p0.y, numerator: numerator, longest: longest,
-                     shortest: shortest, dx1: dx1, dy1: dy1, dx2: dx2, dy2: dy2}
+        BresenhamIter {
+            i: 0,
+            x: p0.x,
+            y: p0.y,
+            numerator: numerator,
+            longest: longest,
+            shortest: shortest,
+            dx1: dx1,
+            dy1: dy1,
+            dx2: dx2,
+            dy2: dy2,
+        }
     }
 }
 
@@ -93,7 +112,7 @@ struct BresenhamIter {
     dx1: i32,
     dy1: i32,
     dx2: i32,
-    dy2: i32
+    dy2: i32,
 }
 
 #[derive(Debug)]
@@ -131,15 +150,37 @@ impl Iterator for BresenhamIter {
 
 fn main() {
     let mut m = MAP.clone();
+    let p0 = Point::new(2, 2);
 
-    for _ in 0..1000000 {
-        for y in 0..MAP_HEIGHT {
-            for x in 0..MAP_WIDTH {
-                for step in m.line_iter(Point::new(x, y), Point::new(7, 7)) {
-                    m.0[idx(step.x, step.y)] = 2;
-                }
+
+    fn trace(m: &mut Map, p0: Point, p1: Point) {
+        for BresenhamStep { x: sx, y: sy } in m.line_iter(p0, p1) {
+            if m.get_at(sx, sy) == 1 {
+                break;
+            } else {
+                m.set_at(sx, sy, 2);
             }
         }
+    }
+
+    let y = 0;
+    for x in 0..MAP_WIDTH {
+        trace(&mut m, p0, Point::new(x, y));
+    }
+
+    let x = MAP_WIDTH - 1;
+    for y in 0..MAP_HEIGHT {
+        trace(&mut m, p0, Point::new(x, y));
+    }
+
+    let x = 0;
+    for y in 0..MAP_HEIGHT {
+        trace(&mut m, p0, Point::new(x, y));
+    }
+
+    let y = MAP_HEIGHT - 1;
+    for x in 0..MAP_WIDTH {
+        trace(&mut m, p0, Point::new(x, y));
     }
 
     m.print();
